@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css'
+import failSound from './assets/fail.mp3'
+import successSound from './assets/success.mp3'
 
 interface Question {
   multiplicand: number
@@ -44,6 +46,55 @@ function App() {
   >([])
   const [speechSupport, setSpeechSupport] = useState(false)
   const [preferredVoice, setPreferredVoice] = useState<SpeechSynthesisVoice | null>(null)
+  const successAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const playFailSound = useCallback((): Promise<void> => {
+    if (typeof window === 'undefined') {
+      return Promise.resolve()
+    }
+    const audio = new Audio(failSound)
+    audio.volume = 0.8
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        audio.removeEventListener('ended', cleanup)
+        audio.removeEventListener('error', cleanup)
+        resolve()
+      }
+      audio.addEventListener('ended', cleanup, { once: true })
+      audio.addEventListener('error', cleanup, { once: true })
+      const playPromise = audio.play()
+      if (!playPromise) {
+        cleanup()
+        return
+      }
+      playPromise.catch(() => cleanup())
+    })
+  }, [])
+
+  const playSuccessSound = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const audio = successAudioRef.current
+    if (!audio) {
+      return
+    }
+    audio.currentTime = 0
+    void audio.play()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    successAudioRef.current = new Audio(successSound)
+    successAudioRef.current.volume = 0.8
+    return () => {
+      successAudioRef.current?.pause()
+      successAudioRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -124,14 +175,16 @@ function App() {
       setCurrentStreak(nextStreak)
       setBestStreak((prev) => Math.max(prev, nextStreak))
       setFeedback({ type: 'success', message: '正解！' })
+      playSuccessSound()
     } else {
       setCurrentStreak(0)
-      const message = `不正解。${multiplicand} かける ${multiplier} の正しい答えは ${answer} です。`
+      const explanation = `${multiplicand} かける ${multiplier} の正しい答えは ${answer} です。`
+      const message = `不正解。${explanation}`
       setFeedback({
         type: 'danger',
         message,
       })
-      speakFeedback(message)
+      void playFailSound().finally(() => speakFeedback(explanation))
     }
 
     setHistory((prev) => [
