@@ -188,13 +188,13 @@ function App() {
     }
 
     setHistory((prev) => [
-      ...prev,
       {
         label: `${multiplicand} × ${multiplier}`,
         correct: isCorrect,
         userAnswer: parsed,
         answer,
       },
+      ...prev,
     ])
 
     setInputValue('')
