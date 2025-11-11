@@ -253,7 +253,7 @@ function App() {
               {gameStatus === 'running' && currentQuestion && (
                 <>
                   <p className="lead fw-semibold text-center mb-4">
-                    [{answeredCount + 1}/{TOTAL_QUESTIONS}] {currentQuestion.multiplicand} × {currentQuestion.multiplier} = ?
+                    {currentQuestion.multiplicand} × {currentQuestion.multiplier} = ?
                   </p>
                   <form className="row g-2 align-items-end" onSubmit={handleSubmit}>
                     <div className="col-sm-8">
